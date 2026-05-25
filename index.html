@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymOS - Kompleksowy Interfejs Systemowy</title>
+    <style>
+        :root {
+            --bg-body: #0e0e16;
+            --bg-sidebar: #09090e;
+            --bg-card: #1c1c28;
+            --text-main: #ffffff;
+            --text-muted: #8a8a9e;
+            --accent-blue: #0d6efd;
+            --accent-blue-hover: #0b5ed7;
+            --accent-green: #198754;
+            --accent-green-hover: #157347;
+            --accent-red: #dc3545;
+            --accent-red-hover: #bb2d3b;
+            --border-color: #2b2b3c;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; flex-shrink: 0; }
+        .logo { font-size: 24px; font-weight: bold; padding: 0 20px 15px 20px; color: var(--text-main); }
+        .logo span { color: var(--accent-blue); }
+        
+        /* Role Selector */
+        .role-selector-container {
+            padding: 0 20px 25px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .role-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: block;
+            letter-spacing: 0.5px;
+        }
+        .role-select {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--accent-blue);
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            outline: none;
+            font-weight: 600;
+        }
+
+        .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        .nav-item { padding: 12px 20px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .nav-item:hover, .nav-item.active { background-color: rgba(13, 110, 253, 0.1); color: var(--accent-blue); border-right: 3px solid var(--accent-blue); }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 30px 40px; overflow-y: auto; position: relative; scroll-behavior: smooth; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .page-title { font-size: 24px; font-weight: 600; }
+        .user-profile { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .user-avatar { width: 36px; height: 36px; background-color: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: background 0.3s;}
+
+        /* View Containers */
+        .view-container { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-container.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Grid Layouts */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+        /* Cards */
+        .card { background-color: var(--bg-card); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .card-title { font-size: 12px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 20px; font-weight: 600; }
+
+        /* Buttons */
+        .btn { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; width: 100%; text-align: center; margin-bottom: 10px; display: inline-block; text-decoration: none;}
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background-color: var(--accent-blue); border-color: var(--accent-blue); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--accent-blue-hover); }
+        .btn-outline-primary { border-color: var(--accent-blue); color: var(--accent-blue); }
+        .btn-outline-primary:hover:not(:disabled) { background-color: rgba(13, 110, 253, 0.1); }
+        .btn-danger { background-color: transparent; border-color: var(--accent-red); color: var(--accent-red); }
+        .btn-danger:hover:not(:disabled) { background-color: rgba(220, 53, 69, 0.1); }
+        .btn-danger-filled { background-color: var(--accent-red); border-color: var(--accent-red); color: #fff; }
+        .btn-danger-filled:hover:not(:disabled) { background-color: var(--accent-red-hover); }
+        .btn-success { background-color: var(--accent-green); border-color: var(--accent-green); color: #fff; }
+        .btn-success:hover:not(:disabled) { background-color: var(--accent-green-hover); }
+
+        /* Tables */
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .table th { color: var(--text-muted); font-size: 12px; text-transform: uppercase; font-weight: 600; }
+        .table td { font-size: 14px; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; background-color: rgba(255,255,255,0.1); transition: 0.2s; display: inline-block; font-weight: 500;}
+        .status-badge.active { color: var(--accent-green); background-color: rgba(25, 135, 84, 0.1); border: 1px solid var(--accent-green); }
+        .status-badge.pending { color: orange; background-color: rgba(255, 165, 0, 0.1); border: 1px solid orange; }
+        .status-badge.blocked { color: var(--accent-red); background-color: rgba(220, 53, 69, 0.1); border: 1px solid var(--accent-red); }
+
+        /* Inputs */
+        .form-control { width: 100%; padding: 12px; background-color: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; margin-bottom: 15px; outline: none;}
+        .form-control:focus { border-color: var(--accent-blue); }
+        select.form-control { cursor: pointer; }
+        textarea.form-control { resize: vertical; min-height: 80px; }
+
+        /* Notification Toast */
+        #toast { position: absolute; top: 20px; right: 40px; padding: 15px 20px; border-radius: 8px; color: white; opacity: 0; transform: translateY(-20px); transition: all 0.3s; pointer-events: none; z-index: 3000; font-weight: 500;}
+        .toast-success { background-color: var(--accent-green); box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3); }
+        .toast-error { background-color: var(--accent-red); box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); }
+
+        /* Modal Overlay */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2500; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-content { background-color: var(--bg-card); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+        .plan-price { font-size: 32px; font-weight: bold; color: var(--accent-blue); margin-bottom: 10px; }
+        
+        /* Ukrywanie scrollbara dla estetyki */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">Gym<span>OS</span></div>
+        
+        <div class="role-selector-container">
+            <label class="role-label">Profil uprawnień:</label>
+            <select id="role-selector" class="role-select" onchange="changeRole(this.value)">
+                <option value="klient">Klient (Aplikacja)</option>
+                <option value="pracownik">Pracownik / Menedżer</option>
+            </select>
+        </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item active" id="nav-karnet" onclick="switchView('v-karnet', this)">1. Zarządzaj Karnetem</li>
+            <li class="nav-item" id="nav-platnosc" onclick="switchView('v-platnosc', this)">2. Realizuj Płatność</li>
+            <li class="nav-item" id="nav-dostep" onclick="switchView('v-dostep', this)">3. Kontroluj Dostęp</li>
+            <li class="nav-item" id="nav-trening" onclick="switchView('v-trening', this)">4. Zarządzaj Treningiem</li>
+            <li class="nav-item" id="nav-zgloszenia" onclick="switchView('v-zgloszenia', this)">5. Zgłoszenia (Tickety)</li>
+            <li class="nav-item" id="nav-pracownik" onclick="switchView('v-pracownik', this)" style="display:none;">6. Zarządzaj Pracownikiem</li>
+            <li class="nav-item" id="nav-uzytkownik" onclick="switchView('v-uzytkownik', this)">7. Zarządzaj Użytkownikiem</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div id="toast">Wiadomość</div>
+
+        <div class="top-bar">
+            <h1 class="page-title" id="page-title">Zarządzaj Karnetem</h1>
+            <div class="user-profile">
+                <span id="user-name-text">Witaj, Jan K. (Klient)</span>
+                <div class="user-avatar" id="user-avatar-element">JK</div>
+            </div>
+        </div>
+
+        <div id="v-karnet" class="view-container active">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Twój obecny plan</div>
+                    <div class="plan-price" id="karnet-plan-name">Premium Open 24/7</div>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;" id="karnet-date">Ważny do: 24.05.2026</p>
+                    <span id="karnet-status" class="status-badge pending">Oczekuje na płatność</span>
+                </div>
+                <div class="card" id="karnet-actions-card">
+                    <div class="card-title">Szybkie akcje</div>
+                    <div id="karnet-client-actions">
+                        <button class="btn btn-primary" onclick="goToPayment()">Kup / Opłać Karnet</button>
+                        <button class="btn btn-outline-primary" onclick="showToast('Subskrypcja została przedłużona o miesiąc.', 'success')">Przedłuż karnet</button>
+                        <button class="btn btn-outline-primary" onclick="suspendFromKarnet()">Zawieś subskrypcję</button>
+                        <button class="btn btn-danger" onclick="cancelSubscription()">Anuluj subskrypcję</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="v-platnosc" class="view-container">
+            <div class="card" style="max-width: 500px; margin: 0 auto;">
+                <div class="card-title">Bramka Płatnicza (KARTA / BLIK)</div>
+                <p style="color: var(--text-muted); margin-bottom: 5px;">Do zapłaty:</p>
+                <div style="font-size: 36px; font-weight: bold; margin-bottom: 20px;">149,00 PLN</div>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Usługa: Odnowienie Premium Open</p>
+                <input type="text" id="blik-code" class="form-control" placeholder="Kod BLIK (6 cyfr)" maxlength="6" />
+                <button class="btn btn-success" style="padding: 15px; font-size: 16px;" onclick="processPayment()">Zrealizuj Płatność (Secure)</button>
+            </div>
+        </div>
+
+        <div id="v-dostep" class="view-container">
+            <div id="dostep-client-view" class="card" style="text-align: center; max-width: 450px; margin: 0 auto;">
+                <div class="card-title">Twój Autonomiczny Kod QR</div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Zeskanuj kod przy bramce wejściowej siłowni. Ze względów bezpieczeństwa kod odświeża się co 5 minut.</p>
+                <div style="background-color: #fff; width: 180px; height: 180px; margin: 20px auto; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <img id="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=GYMOS-CLIENT-773" alt="QR Code" style="width:100%; padding:10px;">
+                </div>
+                <div id="qr-text" style="color: var(--accent-blue); font-family: monospace; font-size: 18px; margin-bottom: 15px;">GYMOS-CLIENT-773</div>
+                <button class="btn btn-primary" onclick="generateNewQR()">Odśwież kod QR</button>
+            </div>
+
+            <div id="dostep-staff-view" class="card" style="display:none;">
+                <div class="card-title">Monitorowanie Obiektu Na Żywo (Weryfikacja Bramki)</div>
+                <table class="table" id="access-table">
+                    <thead>
+                        <tr>
+                            <th>Użytkownik (Klient)</th>
+                            <th>Typ Karnetu</th>
+                            <th>Status wejścia</th>
+                            <th>Akcja Personelu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Anna Nowak</td>
+                            <td>Studencki Open</td>
+                            <td><span class="status-badge active">W obiekcie</span></td>
+                            <td><button class="btn btn-danger" style="padding: 4px 10px; width: auto; margin:0;" onclick="wypiszZObiektu(this)">Wypuść wymuszenie</button></td>
+                        </tr>
+                        <tr>
+                            <td>Jan Kowalski</td>
+                            <td>Premium 24/7</td>
+                            <td><span class="status-badge active">W obiekcie</span></td>
+                            <td><button class="btn btn-danger" style="padding: 4px 10px; width: auto; margin:0;" onclick="wypiszZObiektu(this)">Wypuść wymuszenie</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn btn-outline-primary" style="margin-top: 20px; width: auto;" onclick="showToast('Sygnał awaryjnego otwarcia bramki #1 wejściowej został wysłany.', 'success')">Zdalne otwarcie bramki głównej</button>
+            </div>
+        </div>
+
+        <div id="v-trening" class="view-container">
+            <div id="trening-client-view">
+                <p style="color: var(--accent-green); font-size: 13px; margin-bottom: 15px;">Tryb Online - Wyniki zsynchronizowane</p>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">DZISIEJSZA SESJA TRENINGOWA</div>
+                        <p style="margin-bottom: 15px;">Aktywny plan: <strong id="client-active-plan-display">Siła (Dzień 2)</strong></p>
+                        <ul id="exercise-list" style="list-style:none; margin-bottom:20px; color:var(--text-muted); font-size:14px; line-height:1.6;">
+                            <li>- Wyciskanie sztangi leżąc: 4 serie po 10 powt.</li>
+                            <li>- Rozpiętki na maszynie: 3 serie po 12 powt.</li>
+                        </ul>
+                        <button class="btn btn-outline-primary" onclick="openExerciseModal()">+ Dodaj ćwiczenie</button>
+                        <button class="btn btn-outline-primary" onclick="showToast('Funkcja rezerwacji otwarta z kalendarza poniżej.', 'success')">Zarezerwuj lekcję z trenerem</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">HISTORIA I STATYSTYKI</div>
+                        <input type="date" class="form-control" style="margin-bottom: 10px;" />
+                        <input type="date" class="form-control" style="margin-bottom: 20px;" />
+                        <div style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border-color); padding: 40px 20px; text-align: center; color: var(--text-muted); border-radius: 6px; margin-bottom: 20px; font-size: 14px;">
+                            Wizualizacja wykresów z Apple Health/Google Fit
+                        </div>
+                        <button class="btn btn-primary" style="margin: 0;" onclick="showToast('Generowanie raportu...', 'success')">Generuj raport PDF</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">ZAPISY: WOLNE TERMINY TRENERÓW</div>
+                        <label class="role-label">WYBIERZ INTERESUJĄCEGO CIĘ TRENERA:</label>
+                        <select class="form-control" id="client-trainer-select">
+                            <option>Tomasz Wiśniewski (Trener - Siła/Dolne partie)</option>
+                        </select>
+                        
+                        <table class="table" style="margin-top: 15px;">
+                            <thead>
+                                <tr>
+                                    <th>DZIEŃ I GODZINA</th>
+                                    <th>STATUS</th>
+                                    <th>AKCJA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Poniedziałek, 18:00</td>
+                                    <td><span class="status-badge active" style="padding: 2px 8px; border-color:var(--accent-green); color:var(--accent-green);">Wolny</span></td>
+                                    <td><button class="btn btn-primary" style="padding: 4px 15px; margin: 0; width: auto;" onclick="showToast('Zarezerwowano termin z trenerem!', 'success')">Zapisz</button></td>
+                                </tr>
+                                <tr>
+                                    <td>Środa, 14:00</td>
+                                    <td><span class="status-badge active" style="padding: 2px 8px; border-color:var(--accent-green); color:var(--accent-green);">Wolny</span></td>
+                                    <td><button class="btn btn-primary" style="padding: 4px 15px; margin: 0; width: auto;" onclick="showToast('Zarezerwowano termin z trenerem!', 'success')">Zapisz</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">TWOJE REZERWACJE TRENINGÓW</div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 6px; color: var(--text-muted); font-size: 14px;">
+                            Brak aktywnych rezerwacji na lekcje personalne.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="trening-staff-view" style="display:none;" class="card">
+                <div class="card-title">Panel Trenera: Przypisywanie planu treningowego klientowi</div>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 14px;">Wyszukaj klienta i przypisz mu gotowy lub niestandardowy cykl ćwiczeń.</p>
+                
+                <div style="max-width: 600px;">
+                    <label class="role-label">Wyszukaj klienta (Imię / Nazwisko / ID):</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="staff-search-client-training" class="form-control" style="margin-bottom: 0;" placeholder="Wpisz np. Jan Kowalski..." />
+                        <button class="btn btn-outline-primary" style="width: auto; margin-bottom: 0;" onclick="findClientForTraining()">Szukaj</button>
+                    </div>
+                    
+                    <div id="staff-client-training-result" style="display:none; padding: 12px; border: 1px solid var(--accent-green); border-radius: 6px; margin-bottom: 20px; background: rgba(25, 135, 84, 0.1);">
+                        Wybrano klienta: <strong id="staff-selected-client-training">Jan Kowalski</strong>
+                    </div>
+
+                    <label class="role-label">Wybierz lub stwórz plan treningowy:</label>
+                    <select id="staff-assign-plan" class="form-control" onchange="toggleCustomPlanInput()">
+                        <option value="Masa Mięśniowa (Zaawansowany)">Masa Mięśniowa (Zaawansowany - 4 dni)</option>
+                        <option value="Redukcja i Wytrzymałość">Redukcja i Wytrzymałość (3 dni)</option>
+                        <option value="Trójbój Siłowy (Kierownik BR)">Trójbój Siłowy (Kierownik BR - 5 dni)</option>
+                        <option value="FBW - Ogólnorozwojowy">FBW - Ogólnorozwojowy (Dla początkujących)</option>
+                        <option value="CUSTOM" style="font-weight: bold; color: var(--accent-blue);">+ Własny plan treningowy (Niestandardowy)</option>
+                    </select>
+
+                    <div id="staff-custom-plan-container" style="display: none; margin-bottom: 15px;">
+                        <input type="text" id="staff-custom-plan-title" class="form-control" placeholder="Tytuł własnego planu (np. Powrót po kontuzji)" />
+                        <textarea id="staff-custom-plan-desc" class="form-control" placeholder="Wpisz zestaw ćwiczeń, serie i powtórzenia..."></textarea>
+                    </div>
+
+                    <button class="btn btn-success" onclick="assignPlanToClient()">Zatwierdź i przypisz plan cyfrowy</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="v-zgloszenia" class="view-container">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div class="card-title" style="margin: 0;" id="ticket-title-main">System Ticketowy Obiektu Autonomicznego</div>
+                    <button class="btn btn-primary" style="width: auto; margin: 0;" id="btn-add-ticket-main" onclick="showAddTicketForm()">+ Dodaj zgłoszenie awarii</button>
+                </div>
+
+                <div id="add-ticket-form" style="display:none; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; margin-bottom: 15px;">Nowe Zgłoszenie Problemu / Reklamacji</h3>
+                    <input type="text" id="ticket-title-input" class="form-control" placeholder="Nazwa usterki (np. Urwana linka wyciągu górnego)" />
+                    <select id="ticket-category-input" class="form-control">
+                        <option value="Awaria sprzętu" style="background:var(--bg-body)">Awaria sprzętu</option>
+                        <option value="Utrzymanie czystości" style="background:var(--bg-body)">Utrzymanie czystości</option>
+                        <option value="Inne / Administracja" style="background:var(--bg-body)">Inne / Administracja</option>
+                    </select>
+                    <textarea id="ticket-desc-input" class="form-control" placeholder="Wpisz szczegółowy opis oraz numer seryjny maszyny (jeśli widoczny)..."></textarea>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-success" style="margin: 0;" onclick="submitTicket()">Wyślij zgłoszenie cyfrowe</button>
+                        <button class="btn btn-danger" style="margin: 0;" onclick="hideAddTicketForm()">Anuluj</button>
+                    </div>
+                </div>
+
+                <table class="table" id="ticket-table">
+                    <thead>
+                        <tr>
+                            <th>ID Zgłoszenia</th>
+                            <th>Typ i Nazwa Problemu</th>
+                            <th>Zgłaszający</th>
+                            <th id="ticket-action-header">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#TCK-712</td>
+                            <td>Awaria sprzętu: Niedziałający panel bieżni #3</td>
+                            <td>Jan Kowalski</td>
+                            <td>
+                                <span class="status-badge pending" id="badge-tck-712">Oczekujące</span>
+                                <button class="btn btn-outline-primary staff-ticket-btn" style="padding: 4px 10px; font-size: 11px; width: auto; margin:0 0 0 10px; display:none;" onclick="openTicketManageModal('TCK-712')">Zarządzaj</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#TCK-809</td>
+                            <td>Utrzymanie czystości: Brak płynu do dezynfekcji strefa wolnych ciężarów</td>
+                            <td>System Autonomiczny</td>
+                            <td>
+                                <span class="status-badge active" style="color:var(--accent-blue); border-color:var(--accent-blue);" id="badge-tck-809">W trakcie</span>
+                                <button class="btn btn-outline-primary staff-ticket-btn" style="padding: 4px 10px; font-size: 11px; width: auto; margin:0 0 0 10px; display:none;" onclick="openTicketManageModal('TCK-809')">Zarządzaj</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p id="ticket-footer-hint" style="color:var(--text-muted); font-size:12px; margin-top:15px;"></p>
+            </div>
+        </div>
+
+        <div id="v-pracownik" class="view-container">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div class="card-title" style="margin: 0;">Lista Personelu i Trenerów Dyżurnych</div>
+                    <button class="btn btn-primary" style="width: auto; margin: 0;" onclick="openAddEmployeeModal()">+ Dodaj nowego pracownika</button>
+                </div>
+                <table class="table" id="employee-table">
+                    <thead>
+                        <tr>
+                            <th>Imię i Nazwisko pracownika</th>
+                            <th>Rola / Kompetencje w GymOS</th>
+                            <th>Zarządzanie uprawnieniami</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Bartosz Rosmanowski</td>
+                            <td>Kierownik Zespołu / Manager</td>
+                            <td><button class="btn btn-danger" style="width: auto; padding: 4px 10px; margin:0;" onclick="deleteEmployee(this)">Usuń dostęp</button></td>
+                        </tr>
+                        <tr>
+                            <td>Piotr Pliszka</td>
+                            <td>Administrator / Menedżer systemowy</td>
+                            <td><button class="btn btn-danger" style="width: auto; padding: 4px 10px; margin:0;" onclick="deleteEmployee(this)">Usuń dostęp</button></td>
+                        </tr>
+                        <tr>
+                            <td>Tomasz Wiśniewski</td>
+                            <td>Trener Dyżurny (Stawka: 80zł/h)</td>
+                            <td><button class="btn btn-danger" style="width: auto; padding: 4px 10px; margin:0;" onclick="deleteEmployee(this)">Usuń dostęp</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="v-uzytkownik" class="view-container">
+            <div id="uzytkownik-client-view" class="card" style="max-width: 550px; margin: 0 auto;">
+                <div class="card-title">Zarządzanie Moim Kontem Użytkownika</div>
+                <p style="margin-bottom: 15px; font-size: 14px; line-height: 1.5;">Masz prawo do modyfikacji statusu swojego profilu zgodnie z polityką RODO systemu autonomicznego.</p>
+                <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+                    <p style="font-size:12px; color: var(--text-muted); line-height: 1.5;">
+                        <strong>Zawieszenie konta:</strong> Zamraża pobieranie opłat subskrypcyjnych z karty na czas określony. Kod QR straci ważność do momentu ponownej aktywacji.<br><br>
+                        <strong>Usunięcie konta:</strong> Trwałe i nieodwracalne usunięcie konta, kart płatniczych oraz wyczyszczenie historii Twoich treningów.
+                    </p>
+                </div>
+                <button class="btn btn-outline-primary" style="padding: 12px; font-size: 15px;" onclick="clientSelfSuspend()">Zawieś moje konto tymczasowo</button>
+                <button class="btn btn-danger-filled" style="padding: 12px; font-size: 15px;" onclick="clientSelfDelete()">Usuń moje konto na stałe</button>
+            </div>
+
+            <div id="uzytkownik-staff-view" style="display:none;" class="grid-3">
+                <div class="card">
+                    <div class="card-title">Karta Klienta z Systemu CRM</div>
+                    <div id="crm-profile-data" style="display: none;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                            <div style="width:60px;height:60px;background:#34495e;border-radius:50%;text-align:center;font-size:24px;line-height:60px; font-weight:bold;" id="crm-avatar">??</div>
+                            <div>
+                                <h2 style="font-size: 20px;" id="crm-client-name">Wyszukany Użytkownik</h2>
+                                <span class="status-badge active" id="crm-client-status">Aktywny</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 14px; line-height: 1.8; color: var(--text-muted);">
+                            <p>Email: <span id="crm-client-email" style="color:#fff;">-</span></p>
+                            <p>Telefon: <span id="crm-client-phone" style="color:#fff;">-</span></p>
+                            <p>Ostatnie logowanie na bramce: <span style="color:#fff;">Dzisiaj, 16:21</span></p>
+                        </div>
+                    </div>
+                    <div id="crm-profile-empty" style="color: var(--text-muted); text-align: center; padding: 4px 0;">
+                        Wprowadź dane klienta w panelu wyszukiwarki CRM.
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Wyszukiwarka CRM i Akcje Blokowania</div>
+                    <input type="text" id="crm-search-input" class="form-control" placeholder="Wpisz np. Adam Nowacki" />
+                    <button class="btn btn-primary" style="margin-bottom: 20px;" onclick="searchClientCRM()">Wyszukaj profil w bazie</button>
+                    
+                    <div id="crm-admin-actions" style="display:none; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        <button class="btn btn-danger-filled" id="btn-crm-toggle-block" onclick="toggleBlockClientCRM()">Zablokuj konto klienta (Brak płatności)</button>
+                        <button class="btn btn-outline-primary" onclick="showToast('Ręczny sygnał odblokowania bramki wysłany pomyślnie.', 'success')">Ręczne otwarcie bramki dla klienta</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="exercise-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="card-title" style="margin-bottom: 15px; color: #fff;">Dodaj ćwiczenie do dzisiejszego treningu</div>
+            <label class="role-label">Nazwa ćwiczenia</label>
+            <input type="text" id="modal-ex-name" class="form-control" placeholder="np. Martwy ciąg" />
+            <div style="display: flex; gap: 15px;">
+                <div style="flex: 1;">
+                    <label class="role-label">Liczba serii</label>
+                    <input type="number" id="modal-ex-sets" class="form-control" placeholder="np. 4" />
+                </div>
+                <div style="flex: 1;">
+                    <label class="role-label">Powtórzenia</label>
+                    <input type="number" id="modal-ex-reps" class="form-control" placeholder="np. 10" />
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn btn-success" style="margin: 0;" onclick="submitExerciseModal()">Zapisz ćwiczenie</button>
+                <button class="btn btn-danger" style="margin: 0;" onclick="closeExerciseModal()">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="employee-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="card-title" style="margin-bottom: 15px; color: #fff;">Tworzenie konta pracowniczego GymOS</div>
+            
+            <label class="role-label">Imię i Nazwisko pracownika</label>
+            <input type="text" id="modal-emp-name" class="form-control" placeholder="np. Andrzej Golara" />
+            
+            <label class="role-label">Kompetencje / Rola w systemie</label>
+            <select id="modal-emp-role" class="form-control">
+                <option value="Trener Dyżurny" style="background:var(--bg-body)">Trener Dyżurny (Obsługa Treningów)</option>
+                <option value="Manager Obiektu" style="background:var(--bg-body)">Manager Obiektu (Zarządzanie kadrami)</option>
+                <option value="Wsparcie Techniczne CRM" style="background:var(--bg-body)">Wsparcie Techniczne CRM</option>
+                <option value="Firma Sprzątająca (Zewnętrzna)" style="background:var(--bg-body)">Firma Sprzątająca (Zewnętrzna)</option>
+            </select>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-success" style="margin: 0;" onclick="submitEmployeeModal()">Utwórz konto pracownicze</button>
+                <button class="btn btn-danger" style="margin: 0;" onclick="closeAddEmployeeModal()">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ticket-manage-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="card-title" style="margin-bottom: 15px; color: #fff;">Edycja zgłoszenia: #<span id="modal-ticket-id"></span></div>
+            
+            <label class="role-label">Zmień status zgłoszenia</label>
+            <select id="modal-ticket-status" class="form-control">
+                <option value="Oczekujące" style="background:var(--bg-body)">Oczekujące</option>
+                <option value="W trakcie" style="background:var(--bg-body)">W trakcie</option>
+                <option value="Zakończone" style="background:var(--bg-body)">Zakończone</option>
+            </select>
+
+            <label class="role-label">Notatka serwisowa / Odpowiedź (widoczna dla klienta)</label>
+            <textarea id="modal-ticket-note" class="form-control" placeholder="Wpisz komentarz dla klienta lub serwisu..."></textarea>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-success" style="margin: 0;" onclick="saveTicketManageModal()">Zapisz i zaktualizuj</button>
+                <button class="btn btn-danger" style="margin: 0;" onclick="closeTicketManageModal()">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Słownik stanów użytkowników CRM (Symulacja bazy danych)
+        let mockClients = {
+            "adam nowacki": { name: "Adam Nowacki", email: "a.nowacki@gmail.com", phone: "+48 501 234 987", blocked: true },
+            "jan kowalski": { name: "Jan Kowalski", email: "j.kowalski@wp.pl", phone: "+48 667 112 090", blocked: false },
+            "anna nowak": { name: "Anna Nowak", email: "anowak@stud.uj.edu.pl", phone: "+48 732 981 111", blocked: false }
+        };
+        let activeSearchedClientKey = null;
+        let currentEditingTicketId = null;
+
+        // --- Przełączanie Ról (Klient vs Pracownik) ---
+        function changeRole(role) {
+            currentRole = role;
+            hideAddTicketForm();
+            closeExerciseModal();
+            closeAddEmployeeModal();
+            closeTicketManageModal();
+
+            if (role === 'klient') {
+                document.getElementById('user-name-text').innerText = 'Witaj, Jan K. (Klient)';
+                document.getElementById('user-avatar-element').innerText = 'JK';
+                document.getElementById('user-avatar-element').style.backgroundColor = 'var(--accent-blue)';
+
+                // Sidebar
+                document.getElementById('nav-karnet').style.display = 'flex';
+                document.getElementById('nav-platnosc').style.display = 'flex';
+                document.getElementById('nav-dostep').style.display = 'flex';
+                document.getElementById('nav-trening').style.display = 'flex';
+                document.getElementById('nav-zgloszenia').style.display = 'flex';
+                document.getElementById('nav-pracownik').style.display = 'none';
+                document.getElementById('nav-uzytkownik').style.display = 'flex';
+
+                // Widok 3: Dostęp
+                document.getElementById('dostep-client-view').style.display = 'block';
+                document.getElementById('dostep-staff-view').style.display = 'none';
+
+                // Widok 4: Trening
+                document.getElementById('trening-client-view').style.display = 'block';
+                document.getElementById('trening-staff-view').style.display = 'none';
+
+                // Widok 5: Zgłoszenia
+                document.getElementById('ticket-title-main').innerText = 'Twoje Zgłoszenia i Reklamacje';
+                document.getElementById('btn-add-ticket-main').style.display = 'block';
+                document.getElementById('ticket-action-header').innerText = 'Status';
+                document.getElementById('ticket-footer-hint').innerText = 'Wskazówka: Jako klient przesyłasz zgłoszenia usterki do systemu autonomicznego. Status ulegnie zmianie po reakcji personelu lub firmy serwisowej.';
+                
+                // Ukrycie przycisków zarządzania ticketami
+                document.querySelectorAll('.staff-ticket-btn').forEach(btn => btn.style.display = 'none');
+
+                // Widok 7: Użytkownik
+                document.getElementById('uzytkownik-client-view').style.display = 'block';
+                document.getElementById('uzytkownik-staff-view').style.display = 'none';
+
+                switchView('v-karnet', document.getElementById('nav-karnet'));
+            } else {
+                document.getElementById('user-name-text').innerText = 'Panel Pracownika: Piotr Z. (Menedżer)';
+                document.getElementById('user-avatar-element').innerText = 'PZ';
+                document.getElementById('user-avatar-element').style.backgroundColor = 'var(--accent-green)';
+
+                // Sidebar (UKRYCIE KARNETU I PŁATNOŚCI U PRACOWNIKA)
+                document.getElementById('nav-karnet').style.display = 'none';
+                document.getElementById('nav-platnosc').style.display = 'none';
+                
+                document.getElementById('nav-dostep').style.display = 'flex';
+                document.getElementById('nav-trening').style.display = 'flex';
+                document.getElementById('nav-zgloszenia').style.display = 'flex';
+                document.getElementById('nav-pracownik').style.display = 'flex';
+                document.getElementById('nav-uzytkownik').style.display = 'flex';
+
+                // Widok 3: Dostęp
+                document.getElementById('dostep-client-view').style.display = 'none';
+                document.getElementById('dostep-staff-view').style.display = 'block';
+
+                // Widok 4: Trening
+                document.getElementById('trening-client-view').style.display = 'none';
+                document.getElementById('trening-staff-view').style.display = 'block';
+
+                // Widok 5: Zgłoszenia
+                document.getElementById('ticket-title-main').innerText = 'Zarządzanie Zgłoszeniami Serwisowymi (CRM)';
+                document.getElementById('btn-add-ticket-main').style.display = 'none';
+                document.getElementById('ticket-action-header').innerText = 'Status i Akcje';
+                document.getElementById('ticket-footer-hint').innerText = 'Wskazówka: Jako pracownik użyj przycisku "Zarządzaj" w celu zmiany statusu i dodania notatki dla klienta.';
+                
+                // Pokazanie przycisków zarządzania ticketami
+                document.querySelectorAll('.staff-ticket-btn').forEach(btn => btn.style.display = 'inline-block');
+
+                // Widok 7: Użytkownik
+                document.getElementById('uzytkownik-client-view').style.display = 'none';
+                document.getElementById('uzytkownik-staff-view').style.display = 'grid';
+
+                // Przełączenie domyślne na Dostęp (ponieważ karnet ukryty)
+                switchView('v-dostep', document.getElementById('nav-dostep'));
+            }
+            showToast(`Przełączono widok na profil: ${role === 'klient' ? 'Klient' : 'Pracownik'}`, 'success');
+        }
+
+        // --- Nawigacja Widoków ---
+        function switchView(viewId, element) {
+            document.querySelectorAll('.nav-menu .nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            const titleText = element.innerText.split('. ')[1];
+            document.getElementById('page-title').innerText = titleText;
+        }
+
+        // --- Dynamiczny system powiadomień Toast ---
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = type === 'success' ? 'toast-success' : 'toast-error';
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-20px)'; }, 3000);
+        }
+
+        // --- Moduł 1 & 2: Karnet i Płatności ---
+        function goToPayment() { switchView('v-platnosc', document.getElementById('nav-platnosc')); }
+        function suspendFromKarnet() {
+            document.getElementById('karnet-status').className = 'status-badge pending';
+            document.getElementById('karnet-status').innerText = 'Konto Zawieszone';
+            showToast('Pomyślnie wysłano żądanie zawieszenia subskrypcji.', 'success');
+        }
+        function cancelSubscription() {
+            if(confirm('Czy chcesz anulować subskrypcję? Krok ten zablokuje dostęp przy kolejnym okresie rozliczeniowym.')) {
+                document.getElementById('karnet-status').className = 'status-badge blocked';
+                document.getElementById('karnet-status').innerText = 'Anulowany';
+                showToast('Subskrypcja została anulowana.', 'success');
+            }
+        }
+        function processPayment() {
+            const blik = document.getElementById('blik-code').value;
+            if(blik.length === 6 && !isNaN(blik)) {
+                showToast('Płatność zrealizowana! Środki zaksięgowane w module bankowym.', 'success');
+                document.getElementById('blik-code').value = '';
+                document.getElementById('karnet-status').className = 'status-badge active';
+                document.getElementById('karnet-status').innerText = 'Aktywny';
+                setTimeout(() => { switchView('v-karnet', document.getElementById('nav-karnet')); }, 1000);
+            } else {
+                showToast('Błąd płatności. Kod BLIK musi składać się z 6 cyfr.', 'error');
+            }
+        }
+
+        // --- Moduł 3: Dostęp ---
+        function generateNewQR() {
+            const rand = Math.floor(100 + Math.random() * 900);
+            document.getElementById('qr-text').innerText = `GYMOS-CLIENT-${rand}`;
+            document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=GYMOS-CLIENT-${rand}`;
+            showToast('Zaktualizowano klucz uwierzytelniający kodu QR dla bramki.', 'success');
+        }
+        function wypiszZObiektu(btn) {
+            btn.closest('tr').remove();
+            showToast('Wymuszono wypisanie użytkownika oraz zwolniono blokadę szafki.', 'success');
+        }
+
+        // --- Moduł 4: Trening ---
+        // KLIENT - Modal Ćwiczenia
+        function openExerciseModal() { document.getElementById('exercise-modal').style.display = 'flex'; }
+        document.getElementById('exercise-modal').addEventListener('click', function(e){ if(e.target === this) closeExerciseModal(); });
+        function closeExerciseModal() {
+            document.getElementById('exercise-modal').style.display = 'none';
+            document.getElementById('modal-ex-name').value = '';
+            document.getElementById('modal-ex-sets').value = '';
+            document.getElementById('modal-ex-reps').value = '';
+        }
+        function submitExerciseModal() {
+            const name = document.getElementById('modal-ex-name').value;
+            const sets = document.getElementById('modal-ex-sets').value;
+            const reps = document.getElementById('modal-ex-reps').value;
+            if(!name.trim()) { showToast('Podaj poprawną nazwę ćwiczenia!', 'error'); return; }
+            
+            const li = document.createElement('li');
+            li.style.marginBottom = '5px';
+            li.innerText = `- ${name}: ${sets ? sets : 3} serie po ${reps ? reps : 10} powt.`;
+            document.getElementById('exercise-list').appendChild(li);
+            
+            showToast('Dodano ćwiczenie do sesji analitycznej.', 'success');
+            closeExerciseModal();
+        }
+        
+        // PRACOWNIK - Wyszukiwanie klienta i plan customowy
+        function findClientForTraining() {
+            const query = document.getElementById('staff-search-client-training').value.trim();
+            if(!query) { showToast('Wprowadź dane klienta w pole wyszukiwania.', 'error'); return; }
+            
+            document.getElementById('staff-client-training-result').style.display = 'block';
+            document.getElementById('staff-selected-client-training').innerText = query;
+            showToast('Wybrano klienta do edycji planu.', 'success');
+        }
+
+        function toggleCustomPlanInput() {
+            const select = document.getElementById('staff-assign-plan');
+            const customContainer = document.getElementById('staff-custom-plan-container');
+            if(select.value === 'CUSTOM') {
+                customContainer.style.display = 'block';
+            } else {
+                customContainer.style.display = 'none';
+            }
+        }
+
+        function assignPlanToClient() {
+            const clientResult = document.getElementById('staff-selected-client-training').innerText;
+            const select = document.getElementById('staff-assign-plan');
+            let finalPlanName = select.value;
+
+            if(select.value === 'CUSTOM') {
+                finalPlanName = document.getElementById('staff-custom-plan-title').value;
+                if(!finalPlanName) {
+                    showToast('Podaj nazwę dla własnego planu treningowego!', 'error');
+                    return;
+                }
+            }
+            
+            // Jeśli przypisujemy akurat Janowi Kowalskiemu (który jest zalogowany jako klient)
+            if(clientResult.toLowerCase().includes("jan kowalski") || clientResult.toLowerCase().includes("kowalski")) {
+                document.getElementById('client-active-plan-display').innerText = finalPlanName;
+            }
+            
+            showToast(`Pomyślnie przypisano nowy plan: "${finalPlanName}" dla klienta!`, 'success');
+        }
+
+        // --- Moduł 5: Zgłoszenia (Modal Edycji dla Pracownika) ---
+        function showAddTicketForm() { document.getElementById('add-ticket-form').style.display = 'block'; }
+        function hideAddTicketForm() {
+            document.getElementById('add-ticket-form').style.display = 'none';
+            document.getElementById('ticket-title-input').value = '';
+            document.getElementById('ticket-desc-input').value = '';
+        }
+        function submitTicket() {
+            const title = document.getElementById('ticket-title-input').value;
+            const cat = document.getElementById('ticket-category-input').value;
+            if(!title.trim()) { showToast('Wprowadź tytuł usterki przed wysłaniem!', 'error'); return; }
+            
+            const tbody = document.querySelector('#ticket-table tbody');
+            const randomId = Math.floor(100 + Math.random() * 899);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>#TCK-${randomId}</td>
+                <td>${cat}: ${title}</td>
+                <td>Jan Kowalski (Ty)</td>
+                <td>
+                    <span class="status-badge pending" id="badge-tck-${randomId}">Oczekujące</span>
+                    <button class="btn btn-outline-primary staff-ticket-btn" style="padding: 4px 10px; font-size: 11px; width: auto; margin:0 0 0 10px; display:${currentRole === 'pracownik' ? 'inline-block' : 'none'};" onclick="openTicketManageModal('TCK-${randomId}')">Zarządzaj</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            showToast('Zgłoszenie awarii zostało zarejestrowane w bazie SI.', 'success');
+            hideAddTicketForm();
+        }
+
+        function openTicketManageModal(ticketId) {
+            currentEditingTicketId = ticketId;
+            document.getElementById('modal-ticket-id').innerText = ticketId;
+            const badge = document.getElementById(`badge-${ticketId.toLowerCase()}`);
+            if(badge) {
+                document.getElementById('modal-ticket-status').value = badge.innerText;
+            }
+            document.getElementById('ticket-manage-modal').style.display = 'flex';
+        }
+
+        document.getElementById('ticket-manage-modal').addEventListener('click', function(e){ if(e.target === this) closeTicketManageModal(); });
+
+        function closeTicketManageModal() {
+            document.getElementById('ticket-manage-modal').style.display = 'none';
+            currentEditingTicketId = null;
+        }
+
+        function saveTicketManageModal() {
+            if(!currentEditingTicketId) return;
+            const newStatus = document.getElementById('modal-ticket-status').value;
+            const badge = document.getElementById(`badge-${currentEditingTicketId.toLowerCase()}`);
+            
+            if(badge) {
+                if(newStatus === 'Oczekujące') {
+                    badge.className = 'status-badge pending';
+                    badge.style.color = ''; badge.style.borderColor = '';
+                } else if(newStatus === 'W trakcie') {
+                    badge.className = 'status-badge active';
+                    badge.style.color = 'var(--accent-blue)'; badge.style.borderColor = 'var(--accent-blue)';
+                } else {
+                    badge.className = 'status-badge active';
+                    badge.style.color = ''; badge.style.borderColor = '';
+                }
+                badge.innerText = newStatus;
+            }
+            
+            showToast('Zaktualizowano zgłoszenie w systemie serwisowym.', 'success');
+            closeTicketManageModal();
+        }
+
+        // --- Moduł 6: Zarządzaj Pracownikiem ---
+        function openAddEmployeeModal() { document.getElementById('employee-modal').style.display = 'flex'; }
+        document.getElementById('employee-modal').addEventListener('click', function(e){ if(e.target === this) closeAddEmployeeModal(); });
+        function closeAddEmployeeModal() {
+            document.getElementById('employee-modal').style.display = 'none';
+            document.getElementById('modal-emp-name').value = '';
+        }
+        function submitEmployeeModal() {
+            const name = document.getElementById('modal-emp-name').value;
+            const role = document.getElementById('modal-emp-role').value;
+            if(!name.trim()) { showToast('Wprowadź imię i nazwisko nowego pracownika!', 'error'); return; }
+
+            const tbody = document.querySelector('#employee-table tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td>${role}</td>
+                <td><button class="btn btn-danger" style="width: auto; padding: 4px 10px; margin:0;" onclick="deleteEmployee(this)">Usuń dostęp</button></td>
+            `;
+            tbody.appendChild(tr);
+            showToast(`Utworzono konto pracownicze dla: ${name}`, 'success');
+            closeAddEmployeeModal();
+        }
+        function deleteEmployee(btn) {
+            if(confirm('Czy chcesz odebrać temu pracownikowi uprawnienia do logowania w GymOS?')) {
+                btn.closest('tr').remove();
+                showToast('Pomyślnie usunięto konto personelu z bazy.', 'success');
+            }
+        }
+
+        // --- Moduł 7: Zarządzaj Użytkownikiem ---
+        function clientSelfSuspend() {
+            if(confirm('Czy na pewno chcesz zawiesić swoje konto? Płatności zostaną zamrożone.')) {
+                showToast('Twoje konto klienckie zostało pomyślnie zawieszone.', 'success');
+                document.getElementById('karnet-status').className = 'status-badge pending';
+                document.getElementById('karnet-status').innerText = 'Konto Zawieszone';
+            }
+        }
+        function clientSelfDelete() {
+            if(confirm('OSTRZEŻENIE! Ta akcja usunie całkowicie Twoje konto z systemu GymOS zgodnie z regulacjami RODO. Czy kontynuować?')) {
+                showToast('Konto zostało bezpowrotnie wymazane. Następuje wylogowanie z systemu.', 'success');
+                setTimeout(() => {
+                    document.body.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100vh; font-size:18px; color:var(--text-muted);">Konto usunięte pomyślnie. Dziękujemy za korzystanie z GymOS.</div>';
+                }, 2000);
+            }
+        }
+
+        function searchClientCRM() {
+            const query = document.getElementById('crm-search-input').value.trim().toLowerCase();
+            if(!query) { showToast('Wpisz imię i nazwisko klienta!', 'error'); return; }
+
+            if(mockClients[query]) {
+                activeSearchedClientKey = query;
+                const client = mockClients[query];
+                
+                document.getElementById('crm-profile-empty').style.display = 'none';
+                document.getElementById('crm-profile-data').style.display = 'block';
+                document.getElementById('crm-admin-actions').style.display = 'block';
+
+                document.getElementById('crm-client-name').innerText = client.name;
+                document.getElementById('crm-client-email').innerText = client.email;
+                document.getElementById('crm-client-phone').innerText = client.phone;
+                document.getElementById('crm-avatar').innerText = client.name.split(' ').map(n => n[0]).join('');
+
+                updateCRMBlockButtonState(client.blocked);
+                showToast('Znaleziono dopasowanie profilu w bazie danych CRM.', 'success');
+            } else {
+                activeSearchedClientKey = null;
+                document.getElementById('crm-profile-empty').style.display = 'block';
+                document.getElementById('crm-profile-empty').innerText = 'Brak wyników wyszukiwania dla podanej frazy.';
+                document.getElementById('crm-profile-data').style.display = 'none';
+                document.getElementById('crm-admin-actions').style.display = 'none';
+                showToast('Nie odnaleziono klienta o podanych danych.', 'error');
+            }
+        }
+
+        function updateCRMBlockButtonState(isBlocked) {
+            const statusBadge = document.getElementById('crm-client-status');
+            const blockBtn = document.getElementById('btn-crm-toggle-block');
+            
+            if(isBlocked) {
+                statusBadge.className = 'status-badge blocked';
+                statusBadge.innerText = 'Zablokowany (Dłużnik)';
+                blockBtn.innerText = 'Odblokuj konto klienta';
+                blockBtn.className = 'btn btn-success';
+                
+                if(activeSearchedClientKey === "jan kowalski") {
+                    document.getElementById('karnet-status').className = 'status-badge blocked';
+                    document.getElementById('karnet-status').innerText = 'Konto Zablokowane';
+                }
+            } else {
+                statusBadge.className = 'status-badge active';
+                statusBadge.innerText = 'Aktywny';
+                blockBtn.innerText = 'Zablokuj konto klienta (Brak płatności)';
+                blockBtn.className = 'btn btn-danger-filled';
+
+                if(activeSearchedClientKey === "jan kowalski") {
+                    document.getElementById('karnet-status').className = 'status-badge active';
+                    document.getElementById('karnet-status').innerText = 'Aktywny';
+                }
+            }
+        }
+
+        function toggleBlockClientCRM() {
+            if(!activeSearchedClientKey || !mockClients[activeSearchedClientKey]) return;
+            let client = mockClients[activeSearchedClientKey];
+            client.blocked = !client.blocked;
+            updateCRMBlockButtonState(client.blocked);
+            showToast(`Zaktualizowano zabezpieczenia profilu. Stan: ${client.blocked ? 'Konto Zablokowane' : 'Konto Aktywne'}`, 'success');
+        }
+
+        // Inicjalizacja domyślnej roli
+        let currentRole = 'klient';
+        changeRole('klient');
+    </script>
+</body>
+</html>
